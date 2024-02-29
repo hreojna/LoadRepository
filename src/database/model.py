@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Optional
 
-import uuid as uuid
 from sqlalchemy import ForeignKey
 from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
@@ -39,13 +38,14 @@ class ReportInfo(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # id_profile: Mapped
-    # id_plan: Mapped
     # uuid: Mapped[uuid]
     name: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime]
     start_datetime: Mapped[datetime]
     end_datetime: Mapped[datetime]
     description: Mapped[Optional[str]]
+
+    # report_operation
 
     @property
     def interval(self) -> timedelta:
@@ -58,4 +58,8 @@ class ReportOperation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     id_report: Mapped[int] = mapped_column(ForeignKey("report_info.id"))
     id_operation: Mapped[int] = mapped_column(ForeignKey("operation.id"))
+    id_metric: Mapped[int] = mapped_column(ForeignKey("metric.id"))
+    metric_value: Mapped[float]
+    # id_plan_level: Mapped
+
     operation: Mapped[Operation] = relationship(back_populates="report_operation")
