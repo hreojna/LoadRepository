@@ -24,8 +24,33 @@ class AggregationMetric(abc.ABC):
 
 
 class AggregationStepMetric(AggregationMetric):
+
+    def __init__(self, *args,
+                 load_plan: list,
+                 offset: int = None,
+                 offset_left: int = 0,
+                 offset_right: int = 0,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        if offset:
+            self.offset_left = offset
+            self.offset_right = offset
+        else:
+            self.offset_left = offset_left
+            self.offset_right = offset_right
+        self.load_plan = load_plan
+
     def shift_time(self):
-        pass
+        shift_time = 0
+        for step in self.load_plan:
+            up_time = step[0]
+            hold_time = step[1]
+            down_time = step[2]
+            load_level = step[3]
+            duration = hold_time - self.offset_left - self.offset_right
+            shift_time = up_time + shift_time
+            yield shift_time + self.offset_left, duration, load_level
+            shift_time += hold_time + down_time
 
     def metric(self, metric_func, column_metric: str):
         for shift_level, duration_level in self.shift_time():
