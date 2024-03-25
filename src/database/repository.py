@@ -6,7 +6,7 @@ from psycopg2 import errors
 from sqlalchemy import exc, delete
 from sqlalchemy.orm import Session, DeclarativeBase
 
-from database.model import ReportInfo, Metric, ReportOperation, Operation
+from database.model import LoadInfo, Metric, Report, Operation, LoadPlan
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,16 @@ class AbstractRepository(abc.ABC):
             self.session.commit()
             logger.info(f'Added new {obj} to the table {obj.__tablename__}')
         return obj
+
+    def add_all(self, objs: list):
+        try:
+            self.session.add_all(objs)
+        except exc.IntegrityError as e:
+            self.session.rollback()
+            raise e
+        else:
+            self.session.commit()
+        return objs
 
     @singledispatchmethod
     def delete(self, obj):
@@ -70,19 +80,25 @@ class OperationRepository(AbstractRepository):
         return Operation.__table__
 
 
+class LoadPlanRepository(AbstractRepository):
+    @property
+    def table(self):
+        return LoadPlan.__table__
+
+
 class ReportRepository(AbstractRepository):
-    def add(self, report: ReportInfo):
+    def add(self, report: LoadInfo):
         super().add(report)
 
     @property
     def table(self):
-        return ReportInfo.__table__
+        return LoadInfo.__table__
 
 
 class ReportOperationRepository(AbstractRepository):
-    def add(self, report_operation: ReportOperation):
+    def add(self, report_operation: Report):
         super().add(report_operation)
 
     @property
     def table(self):
-        return ReportOperation.__table__
+        return Report.__table__
