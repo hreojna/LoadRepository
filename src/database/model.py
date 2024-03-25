@@ -33,6 +33,25 @@ class Operation(Base):
     report_operation: Mapped[ReportOperation] = relationship(back_populates="operation")
 
 
+class LoadPlan(Base):
+    __tablename__ = "load_plan"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    description: Mapped[Optional[str]]
+
+
+class LoadPlanStep(Base):
+    __tablename__ = "load_plan_step"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    id_plan: Mapped[int]
+    up: Mapped[int]
+    hold: Mapped[int]
+    down: Mapped[int]
+    level: Mapped[float]
+
+
 class ReportInfo(Base):
     __tablename__ = "report_info"
 
