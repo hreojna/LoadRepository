@@ -1,6 +1,7 @@
 import abc
 import logging
 from functools import singledispatchmethod
+from typing import TypeVar, Type
 
 from psycopg2 import errors
 from sqlalchemy import exc, delete
@@ -10,13 +11,17 @@ from database.model import LoadInfo, Metric, Report, Operation, LoadPlan
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar('T', bound=DeclarativeBase)
+
 
 class AbstractRepository(abc.ABC):
+    base: Type[T]
 
-    def __init__(self, session):
+    def __init__(self, session, base: Type[T]):
         self.__session: Session = session
+        self.base = base
 
-    def add(self, obj):
+    def add(self, obj: T) -> T:
         try:
             self.session.add(obj)
         except exc.IntegrityError as e:
@@ -30,7 +35,7 @@ class AbstractRepository(abc.ABC):
             logger.info(f'Added new {obj} to the table {obj.__tablename__}')
         return obj
 
-    def add_all(self, objs: list):
+    def add_all(self, objs: list) -> list[T]:
         try:
             self.session.add_all(objs)
         except exc.IntegrityError as e:
@@ -46,16 +51,11 @@ class AbstractRepository(abc.ABC):
 
     @delete.register
     def _delete(self, obj: int):
-        self.session.execute(delete(self.table).where(self.table.c.id == obj))
+        return self.session.execute(delete(self.base).where(self.base.c.id == obj))
 
     @delete.register
-    def _delete(self, obj: DeclarativeBase):
-        self.session.execute(delete(obj.__table__).where(obj.__table__.c.id == obj.id))
-
-    @property
-    @abc.abstractmethod
-    def table(self):
-        pass
+    def _delete(self, obj: T):
+        self.session.execute(delete(self.base).where(self.base.c.id == obj))
 
     @property
     def session(self):
@@ -63,42 +63,25 @@ class AbstractRepository(abc.ABC):
 
 
 class MetricRepository(AbstractRepository):
-    @property
-    def table(self):
-        return Metric.__table__
-
-    def add(self, metric: Metric):
-        super().add(metric)
+    def __init__(self, session: Session):
+        super().__init__(session, Metric)
 
 
 class OperationRepository(AbstractRepository):
-    def add(self, operation: Operation):
-        super().add(operation)
-
-    @property
-    def table(self):
-        return Operation.__table__
+    def __init__(self, session: Session):
+        super().__init__(session, Operation)
 
 
 class LoadPlanRepository(AbstractRepository):
-    @property
-    def table(self):
-        return LoadPlan.__table__
+    def __init__(self, session: Session):
+        super().__init__(session, LoadPlan)
+
+
+class LoadInfoRepository(AbstractRepository):
+    def __init__(self, session: Session):
+        super().__init__(session, LoadInfo)
 
 
 class ReportRepository(AbstractRepository):
-    def add(self, report: LoadInfo):
-        super().add(report)
-
-    @property
-    def table(self):
-        return LoadInfo.__table__
-
-
-class ReportOperationRepository(AbstractRepository):
-    def add(self, report_operation: Report):
-        super().add(report_operation)
-
-    @property
-    def table(self):
-        return Report.__table__
+    def __init__(self, session: Session):
+        super().__init__(session, Report)
